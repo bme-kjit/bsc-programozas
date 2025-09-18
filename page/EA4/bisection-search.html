@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0" />
+    <title>Bináris Keresés Vizualizáció</title>
+
+    <!-- Include Tailwind CSS from CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Include React and ReactDOM from CDN -->
+    <script
+      crossorigin
+      src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script
+      crossorigin
+      src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+
+    <!-- Include Babel for JSX support -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+          Helvetica, Arial, sans-serif;
+        padding: 20px;
+      }
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      class="container"></div>
+
+    <script type="text/babel">
+      const {useState, useEffect} = React;
+
+      function BinarySearchVisualization() {
+        const [array, setArray] = useState([]);
+        const [targetValue, setTargetValue] = useState(null);
+        const [left, setLeft] = useState(0);
+        const [right, setRight] = useState(0);
+        const [mid, setMid] = useState(0);
+        const [found, setFound] = useState(false);
+        const [notFound, setNotFound] = useState(false);
+        const [searching, setSearching] = useState(false);
+        const [speed, setSpeed] = useState(500);
+        const [history, setHistory] = useState([]);
+        const [historyIndex, setHistoryIndex] = useState(-1);
+        const [autoPlay, setAutoPlay] = useState(false);
+        const [comparisons, setComparisons] = useState(0);
+        const [currentStep, setCurrentStep] = useState('Indításra kész');
+
+        // Generate a sorted array of unique values
+        const generateSortedArray = () => {
+          const size = 15;
+          let newArray = [];
+          let value = Math.floor(Math.random() * 10) + 1;
+
+          for (let i = 0; i < size; i++) {
+            newArray.push(value);
+            value += Math.floor(Math.random() * 5) + 1;
+          }
+
+          setArray(newArray);
+          resetSearch();
+        };
+
+        const resetSearch = () => {
+          setLeft(0);
+          setRight(array.length - 1);
+          setMid(Math.floor((0 + array.length - 1) / 2));
+          setFound(false);
+          setNotFound(false);
+          setSearching(false);
+          setAutoPlay(false);
+          setComparisons(0);
+          setCurrentStep(
+            'Válassz célértéket vagy használd a "Véletlen cél" gombot'
+          );
+
+          // Initialize history
+          if (array.length > 0) {
+            const initialState = {
+              left: 0,
+              right: array.length - 1,
+              mid: Math.floor((0 + array.length - 1) / 2),
+              found: false,
+              notFound: false,
+              comparisons: 0,
+              currentStep:
+                'Válassz célértéket vagy használd a "Véletlen cél" gombot',
+            };
+            setHistory([initialState]);
+            setHistoryIndex(0);
+          }
+        };
+
+        const setRandomTarget = () => {
+          if (array.length === 0) return;
+
+          // 75% chance of picking an existing value, 25% chance of a non-existing value
+          const useExisting = Math.random() < 0.75;
+
+          let target;
+          if (useExisting) {
+            // Pick a random element from the array
+            target = array[Math.floor(Math.random() * array.length)];
+          } else {
+            // Generate a value that's not in the array
+            const min = array[0] - 5;
+            const max = array[array.length - 1] + 5;
+            let potentialTarget;
+            do {
+              potentialTarget = Math.floor(Math.random() * (max - min)) + min;
+            } while (array.includes(potentialTarget));
+            target = potentialTarget;
+          }
+
+          setTargetValue(target);
+          resetSearch();
+          setCurrentStep(`Keresési cél: ${target}`);
+
+          // Update history
+          const updatedState = {
+            ...history[0],
+            currentStep: `Keresési cél: ${target}`,
+          };
+          setHistory([updatedState]);
+        };
+
+        const binarySearchStep = () => {
+          if (found || notFound || left > right) return;
+
+          let newLeft = left;
+          let newRight = right;
+          let newMid = Math.floor((newLeft + newRight) / 2);
+          let newFound = found;
+          let newNotFound = notFound;
+          let newComparisons = comparisons + 1;
+          let newStep = '';
+
+          // Compare with current middle
+          if (array[newMid] === targetValue) {
+            newFound = true;
+            newStep = `A ${targetValue} érték megtalálva a ${newMid}. indexen!`;
+            setAutoPlay(false);
+          } else if (array[newMid] < targetValue) {
+            // If target is greater, search right half
+            newStep = `${targetValue} > ${
+              array[newMid]
+            }, jobb felét vizsgáljuk (alsó határ: ${
+              newMid + 1
+            }, felső határ: ${newRight})`;
+            newLeft = newMid + 1;
+          } else {
+            // If target is smaller, search left half
+            newStep = `${targetValue} < ${
+              array[newMid]
+            }, bal felét vizsgáljuk (alsó határ: ${newLeft}, felső határ: ${
+              newMid - 1
+            })`;
+            newRight = newMid - 1;
+          }
+
+          // Check if search failed
+          if (newLeft > newRight && !newFound) {
+            newNotFound = true;
+            newStep = `A ${targetValue} érték nincs a tömbben`;
+            setAutoPlay(false);
+          }
+
+          // Calculate the new mid for the updated bounds
+          if (!newFound && !newNotFound) {
+            newMid = Math.floor((newLeft + newRight) / 2);
+          }
+
+          // Update state values
+          setLeft(newLeft);
+          setRight(newRight);
+          setMid(newMid);
+          setFound(newFound);
+          setNotFound(newNotFound);
+          setComparisons(newComparisons);
+          setCurrentStep(newStep);
+
+          // Add to history
+          const newHistoryState = {
+            left: newLeft,
+            right: newRight,
+            mid: newMid,
+            found: newFound,
+            notFound: newNotFound,
+            comparisons: newComparisons,
+            currentStep: newStep,
+          };
+
+          const newHistory = history
+            .slice(0, historyIndex + 1)
+            .concat(newHistoryState);
+          setHistory(newHistory);
+          setHistoryIndex(historyIndex + 1);
+        };
+
+        const startSearching = () => {
+          if (targetValue === null) {
+            setCurrentStep('Kérjük válassz célértéket először');
+            return;
+          }
+
+          if (!found && !notFound) {
+            setSearching(true);
+            setAutoPlay(true);
+          }
+        };
+
+        const pauseSearching = () => {
+          setAutoPlay(false);
+        };
+
+        const stepForward = () => {
+          if (targetValue === null) {
+            setCurrentStep('Kérjük válassz célértéket először');
+            return;
+          }
+
+          if (historyIndex < history.length - 1) {
+            const nextState = history[historyIndex + 1];
+            setLeft(nextState.left);
+            setRight(nextState.right);
+            setMid(nextState.mid);
+            setFound(nextState.found);
+            setNotFound(nextState.notFound);
+            setComparisons(nextState.comparisons);
+            setCurrentStep(nextState.currentStep);
+            setHistoryIndex(historyIndex + 1);
+          } else {
+            binarySearchStep();
+          }
+        };
+
+        const stepBackward = () => {
+          if (historyIndex > 0) {
+            const prevState = history[historyIndex - 1];
+            setLeft(prevState.left);
+            setRight(prevState.right);
+            setMid(prevState.mid);
+            setFound(prevState.found);
+            setNotFound(prevState.notFound);
+            setComparisons(prevState.comparisons);
+            setCurrentStep(prevState.currentStep);
+            setHistoryIndex(historyIndex - 1);
+          }
+        };
+
+        useEffect(() => {
+          generateSortedArray();
+        }, []);
+
+        useEffect(() => {
+          resetSearch();
+        }, [array]);
+
+        useEffect(() => {
+          let timer;
+          if (autoPlay && !found && !notFound) {
+            timer = setTimeout(() => {
+              binarySearchStep();
+            }, speed);
+          }
+          return () => clearTimeout(timer);
+        }, [left, right, mid, autoPlay, speed, found, notFound]);
+
+        const getItemColor = (index) => {
+          if (found && index === mid) return 'bg-green-500';
+          if (notFound)
+            return index >= left && index <= right
+              ? 'bg-red-100'
+              : 'bg-gray-200';
+          if (index === mid) return 'bg-yellow-500'; // Middle element
+          if (index === left) return 'bg-blue-400'; // Lower bound
+          if (index === right) return 'bg-blue-600'; // Upper bound
+          if (index > left && index < right) return 'bg-blue-200'; // Current search range
+          return 'bg-gray-200'; // Excluded elements
+        };
+
+        const handleArrayItemClick = (value) => {
+          setTargetValue(value);
+          resetSearch();
+          setCurrentStep(`Keresési cél: ${value}`);
+
+          // Update history
+          const updatedState = {
+            ...history[0],
+            currentStep: `Keresési cél: ${value}`,
+          };
+          setHistory([updatedState]);
+        };
+
+        const handleCustomTargetChange = (e) => {
+          const value = parseInt(e.target.value);
+          if (!isNaN(value)) {
+            setTargetValue(value);
+            resetSearch();
+            setCurrentStep(`Keresési cél: ${value}`);
+
+            // Update history
+            const updatedState = {
+              ...history[0],
+              currentStep: `Keresési cél: ${value}`,
+            };
+            setHistory([updatedState]);
+          }
+        };
+
+        return (
+          <div className="flex flex-col p-4 bg-gray-100 rounded-lg shadow-md">
+            <h2 className="text-2xl font-bold text-center mb-4">
+              Bináris Keresés Vizualizáció
+            </h2>
+
+            <div className="mb-4 p-2 bg-white rounded shadow">
+              <h3 className="text-lg font-semibold mb-2">
+                Hogyan működik a bináris keresés:
+              </h3>
+              <p className="text-sm mb-1">
+                1. Megkeressük a rendezett tömb középső elemét
+              </p>
+              <p className="text-sm mb-1">
+                2. Ha a célérték egyenlő a középső elemmel, a keresés kész
+              </p>
+              <p className="text-sm mb-1">
+                3. Ha a célérték kisebb mint a középső elem, keressük a bal
+                oldali részben
+              </p>
+              <p className="text-sm mb-1">
+                4. Ha a célérték nagyobb mint a középső elem, keressük a jobb
+                oldali részben
+              </p>
+              <p className="text-sm">
+                5. Időbonyolultság: O(log n) - sokkal gyorsabb mint a lineáris
+                keresés!
+              </p>
+            </div>
+
+            <div className="mb-4 p-2 bg-white rounded shadow">
+              <div className="flex flex-col items-center">
+                <div className="flex justify-center mb-2">
+                  <input
+                    type="number"
+                    value={targetValue || ''}
+                    onChange={handleCustomTargetChange}
+                    placeholder="Adj meg célértéket"
+                    className="px-2 py-1 border rounded mr-2 w-32"
+                  />
+                  <button
+                    onClick={setRandomTarget}
+                    className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600">
+                    Véletlen cél
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="text-center mb-4 bg-white p-2 rounded shadow">
+              <p className="text-sm font-semibold">{currentStep}</p>
+            </div>
+
+            <div className="mb-4 p-2 bg-white rounded shadow">
+              <div className="flex items-center justify-center">
+                <div className="flex flex-wrap justify-center gap-1">
+                  {array.map((value, index) => (
+                    <div
+                      key={index}
+                      onClick={() => handleArrayItemClick(value)}
+                      className={`w-12 h-12 flex flex-col items-center justify-center cursor-pointer border border-gray-300 rounded transition-all duration-300 ${getItemColor(
+                        index
+                      )}`}>
+                      <span
+                        className={`font-bold ${
+                          index === mid || index === left || index === right
+                            ? 'text-white'
+                            : 'text-black'
+                        }`}>
+                        {value}
+                      </span>
+                      {index === left && (
+                        <span className="text-xs absolute -top-6 bg-blue-400 text-white px-1 rounded">
+                          alsó
+                        </span>
+                      )}
+                      {index === mid && (
+                        <span className="text-xs absolute -top-6 bg-yellow-500 text-white px-1 rounded">
+                          közép
+                        </span>
+                      )}
+                      {index === right && (
+                        <span className="text-xs absolute -top-6 bg-blue-600 text-white px-1 rounded">
+                          felső
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="text-sm text-center mt-8 mb-3 italic">
+                {!found && !notFound && targetValue !== null && (
+                  <p>
+                    {targetValue}{' '}
+                    {array[mid] ? (targetValue > array[mid] ? '>' : '<') : ''}{' '}
+                    {array[mid]}
+                    {targetValue > array[mid]
+                      ? ' → jobb oldalon keresünk (alsó határ változik)'
+                      : targetValue < array[mid]
+                      ? ' → bal oldalon keresünk (felső határ változik)'
+                      : ''}
+                  </p>
+                )}
+              </div>
+
+              <div className="flex justify-center mt-4">
+                <div className="flex items-center mr-4">
+                  <div className="w-4 h-4 bg-blue-400 mr-1"></div>
+                  <span className="text-xs">Alsó határ</span>
+                </div>
+                <div className="flex items-center mr-4">
+                  <div className="w-4 h-4 bg-yellow-500 mr-1"></div>
+                  <span className="text-xs">Középső elem</span>
+                </div>
+                <div className="flex items-center mr-4">
+                  <div className="w-4 h-4 bg-blue-600 mr-1"></div>
+                  <span className="text-xs">Felső határ</span>
+                </div>
+                <div className="flex items-center mr-4">
+                  <div className="w-4 h-4 bg-blue-200 mr-1"></div>
+                  <span className="text-xs">Keresési tartomány</span>
+                </div>
+                <div className="flex items-center mr-4">
+                  <div className="w-4 h-4 bg-green-500 mr-1"></div>
+                  <span className="text-xs">Megtalálva</span>
+                </div>
+                <div className="flex items-center">
+                  <div className="w-4 h-4 bg-gray-200 mr-1"></div>
+                  <span className="text-xs">Kizárva</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="mb-4 flex justify-between items-center">
+              <div className="flex space-x-2">
+                <button
+                  onClick={generateSortedArray}
+                  className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600">
+                  Új Tömb
+                </button>
+                <button
+                  onClick={resetSearch}
+                  className="px-3 py-1 bg-gray-500 text-white rounded hover:bg-gray-600">
+                  Újraindítás
+                </button>
+              </div>
+
+              <div className="flex space-x-2">
+                <button
+                  onClick={stepBackward}
+                  disabled={historyIndex <= 0}
+                  className={`px-3 py-1 rounded ${
+                    historyIndex <= 0
+                      ? 'bg-gray-300 cursor-not-allowed'
+                      : 'bg-purple-500 text-white hover:bg-purple-600'
+                  }`}>
+                  ◀
+                </button>
+
+                {autoPlay ? (
+                  <button
+                    onClick={pauseSearching}
+                    className="px-3 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600">
+                    Szünet
+                  </button>
+                ) : (
+                  <button
+                    onClick={startSearching}
+                    disabled={found || notFound || targetValue === null}
+                    className={`px-3 py-1 rounded ${
+                      found || notFound || targetValue === null
+                        ? 'bg-gray-300 cursor-not-allowed'
+                        : 'bg-green-500 text-white hover:bg-green-600'
+                    }`}>
+                    Indítás
+                  </button>
+                )}
+
+                <button
+                  onClick={binarySearchStep}
+                  disabled={found || notFound || targetValue === null}
+                  className={`px-3 py-1 rounded ${
+                    found || notFound || targetValue === null
+                      ? 'bg-gray-300 cursor-not-allowed'
+                      : 'bg-teal-500 text-white hover:bg-teal-600'
+                  }`}>
+                  Lépés
+                </button>
+
+                <button
+                  onClick={stepForward}
+                  disabled={
+                    ((found || notFound) &&
+                      historyIndex >= history.length - 1) ||
+                    targetValue === null
+                  }
+                  className={`px-3 py-1 rounded ${
+                    ((found || notFound) &&
+                      historyIndex >= history.length - 1) ||
+                    targetValue === null
+                      ? 'bg-gray-300 cursor-not-allowed'
+                      : 'bg-purple-500 text-white hover:bg-purple-600'
+                  }`}>
+                  ▶
+                </button>
+              </div>
+
+              <div className="flex items-center">
+                <span className="mr-2 text-sm">Sebesség:</span>
+                <input
+                  type="range"
+                  min="50"
+                  max="1000"
+                  step="50"
+                  value={1050 - speed}
+                  onChange={(e) => setSpeed(1050 - parseInt(e.target.value))}
+                  className="w-24"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4 text-center bg-white p-2 rounded shadow">
+              <div>
+                <p className="text-sm font-semibold">
+                  Lépések: <span className="text-blue-600">{historyIndex}</span>
+                </p>
+              </div>
+              <div>
+                <p className="text-sm font-semibold">
+                  Összehasonlítások:{' '}
+                  <span className="text-blue-600">{comparisons}</span>
+                </p>
+              </div>
+              <div>
+                <p className="text-sm font-semibold">
+                  Algoritmus: <span className="text-green-600">O(log n)</span>
+                </p>
+              </div>
+              <div className="col-span-3 mt-2">
+                <p className="text-sm italic">
+                  A bináris keresés rendezett tömböt igényel!
+                </p>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      const root = ReactDOM.createRoot(document.getElementById('root'));
+      root.render(<BinarySearchVisualization />);
+    </script>
+  </body>
+</html>

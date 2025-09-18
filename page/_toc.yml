@@ -5,3 +5,6 @@ format: jb-book
 root: intro
 chapters:
 - file: EA2/EA2.ipynb
+- file: EA3/EA3.ipynb
+- file: EA4/EA4.ipynb
+

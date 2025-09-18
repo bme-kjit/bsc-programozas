@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0" />
+    <title>Buborékrendezés Vizualizáció</title>
+
+    <!-- Include Tailwind CSS from CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Include React and ReactDOM from CDN -->
+    <script
+      crossorigin
+      src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script
+      crossorigin
+      src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+
+    <!-- Include Babel for JSX support -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+          Helvetica, Arial, sans-serif;
+        padding: 20px;
+      }
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      class="container"></div>
+
+    <script type="text/babel">
+      const {useState, useEffect} = React;
+
+      function BubbleSortVisualization() {
+        const [array, setArray] = useState([]);
+        const [currentI, setCurrentI] = useState(0);
+        const [currentJ, setCurrentJ] = useState(0);
+        const [sorted, setSorted] = useState(false);
+        const [isSorting, setIsSorting] = useState(false);
+        const [speed, setSpeed] = useState(500);
+        const [history, setHistory] = useState([]);
+        const [historyIndex, setHistoryIndex] = useState(-1);
+        const [autoPlay, setAutoPlay] = useState(false);
+        const [comparisons, setComparisons] = useState(0);
+        const [swaps, setSwaps] = useState(0);
+        const [pass, setPass] = useState(0);
+        const [currentStep, setCurrentStep] = useState('');
+
+        const generateRandomArray = () => {
+          const newArray = Array.from(
+            {length: 10},
+            () => Math.floor(Math.random() * 100) + 1
+          );
+          setArray(newArray);
+          setSorted(false);
+          setCurrentI(0);
+          setCurrentJ(0);
+          setPass(1);
+          setCurrentStep('Indításra kész');
+          setHistory([
+            {
+              array: [...newArray],
+              i: 0,
+              j: 0,
+              pass: 1,
+              sorted: false,
+              comparisons: 0,
+              swaps: 0,
+              currentStep: 'Indításra kész',
+            },
+          ]);
+          setHistoryIndex(0);
+          setComparisons(0);
+          setSwaps(0);
+        };
+
+        const resetDemo = () => {
+          setIsSorting(false);
+          setAutoPlay(false);
+          if (history.length > 0) {
+            const initialState = history[0];
+            setArray([...initialState.array]);
+            setCurrentI(initialState.i);
+            setCurrentJ(initialState.j);
+            setSorted(initialState.sorted);
+            setPass(initialState.pass);
+            setHistoryIndex(0);
+            setComparisons(0);
+            setSwaps(0);
+            setCurrentStep(initialState.currentStep);
+          }
+        };
+
+        const bubbleSortStep = () => {
+          if (sorted) return;
+
+          let newArray = [...array];
+          let newI = currentI;
+          let newJ = currentJ;
+          let newSorted = sorted;
+          let newComparisons = comparisons;
+          let newSwaps = swaps;
+          let newPass = pass;
+          let newStep = '';
+
+          // If we're at the end of a pass
+          if (newJ >= newArray.length - newI - 1) {
+            // Move to the next pass
+            newI++;
+            newJ = 0;
+            newPass++;
+            newStep = `${newPass}. átfutás kezdete`;
+
+            // If we've completed all passes, we're done
+            if (newI >= newArray.length - 1) {
+              newSorted = true;
+              newStep = 'Rendezés befejezve!';
+              setIsSorting(false);
+              setAutoPlay(false);
+            }
+          } else {
+            // Compare and potentially swap adjacent elements
+            newComparisons++;
+            newStep = `${newArray[newJ]} és ${
+              newArray[newJ + 1]
+            } elemek összehasonlítása`;
+
+            if (newArray[newJ] > newArray[newJ + 1]) {
+              newStep = `${newArray[newJ]} és ${
+                newArray[newJ + 1]
+              } elemek cseréje`;
+              const temp = newArray[newJ];
+              newArray[newJ] = newArray[newJ + 1];
+              newArray[newJ + 1] = temp;
+              newSwaps++;
+            }
+            newJ++;
+          }
+
+          setArray(newArray);
+          setCurrentI(newI);
+          setCurrentJ(newJ);
+          setSorted(newSorted);
+          setComparisons(newComparisons);
+          setSwaps(newSwaps);
+          setPass(newPass);
+          setCurrentStep(newStep);
+
+          // Add to history
+          const newHistoryState = {
+            array: [...newArray],
+            i: newI,
+            j: newJ,
+            pass: newPass,
+            sorted: newSorted,
+            comparisons: newComparisons,
+            swaps: newSwaps,
+            currentStep: newStep,
+          };
+
+          const newHistory = history
+            .slice(0, historyIndex + 1)
+            .concat(newHistoryState);
+          setHistory(newHistory);
+          setHistoryIndex(historyIndex + 1);
+        };
+
+        const startSorting = () => {
+          setIsSorting(true);
+          setAutoPlay(true);
+        };
+
+        const pauseSorting = () => {
+          setAutoPlay(false);
+        };
+
+        const stepForward = () => {
+          if (historyIndex < history.length - 1) {
+            const nextState = history[historyIndex + 1];
+            setArray([...nextState.array]);
+            setCurrentI(nextState.i);
+            setCurrentJ(nextState.j);
+            setSorted(nextState.sorted);
+            setPass(nextState.pass);
+            setHistoryIndex(historyIndex + 1);
+            setComparisons(nextState.comparisons);
+            setSwaps(nextState.swaps);
+            setCurrentStep(nextState.currentStep);
+          } else {
+            bubbleSortStep();
+          }
+        };
+
+        const stepBackward = () => {
+          if (historyIndex > 0) {
+            const prevState = history[historyIndex - 1];
+            setArray([...prevState.array]);
+            setCurrentI(prevState.i);
+            setCurrentJ(prevState.j);
+            setSorted(prevState.sorted);
+            setPass(prevState.pass);
+            setHistoryIndex(historyIndex - 1);
+            setComparisons(prevState.comparisons);
+            setSwaps(prevState.swaps);
+            setCurrentStep(prevState.currentStep);
+          }
+        };
+
+        useEffect(() => {
+          generateRandomArray();
+        }, []);
+
+        useEffect(() => {
+          let timer;
+          if (autoPlay && !sorted) {
+            timer = setTimeout(() => {
+              bubbleSortStep();
+            }, speed);
+          }
+          return () => clearTimeout(timer);
+        }, [array, currentI, currentJ, autoPlay, speed, sorted]);
+
+        return (
+          <div className="flex flex-col p-4 bg-gray-100 rounded-lg shadow-md">
+            <h2 className="text-2xl font-bold text-center mb-4">
+              Buborékrendezés Vizualizáció
+            </h2>
+
+            <div className="mb-4 p-2 bg-white rounded shadow">
+              <h3 className="text-lg font-semibold mb-2">
+                Hogyan működik a buborékrendezés:
+              </h3>
+              <p className="text-sm mb-1">
+                1. Szomszédos elemek összehasonlítása és cseréje, ha rossz
+                sorrendben vannak
+              </p>
+              <p className="text-sm mb-1">
+                2. Minden átfutás után a legnagyobb rendezetlen elem
+                "felbuborékol" a megfelelő pozícióba
+              </p>
+              <p className="text-sm mb-1">
+                3. Időbonyolultság: O(n²) a legrosszabb és átlagos esetben, O(n)
+                a legjobb esetben
+              </p>
+            </div>
+
+            <div className="h-64 flex items-end justify-center space-x-1 mb-6 border-b-2 border-gray-400 bg-white rounded p-2">
+              {array.map((value, index) => (
+                <div
+                  key={index}
+                  className={`w-8 flex flex-col items-center justify-end ${
+                    sorted
+                      ? 'bg-green-500'
+                      : index === currentJ
+                      ? 'bg-red-500'
+                      : index === currentJ + 1
+                      ? 'bg-red-500'
+                      : index >= array.length - currentI
+                      ? 'bg-green-300'
+                      : 'bg-blue-500'
+                  } transition-all duration-300`}
+                  style={{height: `${Math.max(value * 2, 24)}px`}}>
+                  <div className="text-white font-bold mb-1">{value}</div>
+                </div>
+              ))}
+            </div>
+
+            <div className="text-center mb-4 bg-white p-2 rounded shadow">
+              <p className="text-sm font-semibold">{currentStep}</p>
+            </div>
+
+            <div className="mb-4 flex justify-between items-center">
+              <div className="flex space-x-2">
+                <button
+                  onClick={generateRandomArray}
+                  className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600">
+                  Új Tömb
+                </button>
+                <button
+                  onClick={resetDemo}
+                  className="px-3 py-1 bg-gray-500 text-white rounded hover:bg-gray-600">
+                  Újraindítás
+                </button>
+              </div>
+
+              <div className="flex space-x-2">
+                <button
+                  onClick={stepBackward}
+                  disabled={historyIndex <= 0}
+                  className={`px-3 py-1 rounded ${
+                    historyIndex <= 0
+                      ? 'bg-gray-300 cursor-not-allowed'
+                      : 'bg-purple-500 text-white hover:bg-purple-600'
+                  }`}>
+                  ◀
+                </button>
+
+                {autoPlay ? (
+                  <button
+                    onClick={pauseSorting}
+                    className="px-3 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600">
+                    Szünet
+                  </button>
+                ) : (
+                  <button
+                    onClick={startSorting}
+                    disabled={sorted}
+                    className={`px-3 py-1 rounded ${
+                      sorted
+                        ? 'bg-gray-300 cursor-not-allowed'
+                        : 'bg-green-500 text-white hover:bg-green-600'
+                    }`}>
+                    Indítás
+                  </button>
+                )}
+
+                <button
+                  onClick={bubbleSortStep}
+                  disabled={sorted}
+                  className={`px-3 py-1 rounded ${
+                    sorted
+                      ? 'bg-gray-300 cursor-not-allowed'
+                      : 'bg-teal-500 text-white hover:bg-teal-600'
+                  }`}>
+                  Lépés
+                </button>
+
+                <button
+                  onClick={stepForward}
+                  disabled={sorted && historyIndex >= history.length - 1}
+                  className={`px-3 py-1 rounded ${
+                    sorted && historyIndex >= history.length - 1
+                      ? 'bg-gray-300 cursor-not-allowed'
+                      : 'bg-purple-500 text-white hover:bg-purple-600'
+                  }`}>
+                  ▶
+                </button>
+              </div>
+
+              <div className="flex items-center">
+                <span className="mr-2 text-sm">Sebesség:</span>
+                <input
+                  type="range"
+                  min="50"
+                  max="1000"
+                  step="50"
+                  value={1050 - speed}
+                  onChange={(e) => setSpeed(1050 - parseInt(e.target.value))}
+                  className="w-24"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4 text-center bg-white p-2 rounded shadow">
+              <div>
+                <p className="text-sm font-semibold">
+                  Átfutás: <span className="text-blue-600">{pass}</span>
+                </p>
+              </div>
+              <div>
+                <p className="text-sm font-semibold">
+                  Összehasonlítások:{' '}
+                  <span className="text-blue-600">{comparisons}</span>
+                </p>
+              </div>
+              <div>
+                <p className="text-sm font-semibold">
+                  Cserék: <span className="text-green-600">{swaps}</span>
+                </p>
+              </div>
+              <div className="col-span-3 mt-2">
+                <div className="flex justify-center space-x-4">
+                  <div className="flex items-center">
+                    <div className="w-4 h-4 bg-red-500 mr-1"></div>
+                    <span className="text-xs">Összehasonlítás</span>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-4 h-4 bg-green-300 mr-1"></div>
+                    <span className="text-xs">Helyben rendezett</span>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-4 h-4 bg-green-500 mr-1"></div>
+                    <span className="text-xs">Teljesen rendezett</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      }
+      const root = ReactDOM.createRoot(document.getElementById('root'));
+      root.render(<BubbleSortVisualization />);
+    </script>
+  </body>
+</html>
